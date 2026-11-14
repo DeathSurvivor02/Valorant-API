@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valorant-API — Player &amp; Match Telemetry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --surface: #12161f;
+      --surface-2: #171c28;
+      --border: #232a3a;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #ff4655;
+      --accent-hover: #e63946;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 20px 56px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      background: var(--accent);
+      display: grid;
+      place-items: center;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 15px;
+      color: #fff;
+      letter-spacing: -0.04em;
+    }
+
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.ok { background: var(--green); }
+    .dot.demo { background: var(--amber); }
+    .dot.err { background: var(--accent); }
+
+    .nav-link {
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      transition: border-color 0.15s ease;
+    }
+
+    .nav-link:hover { border-color: var(--blue); }
+
+    .notice-banner {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fcd34d;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .notice-banner.visible { display: block; }
+
+    .search-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+
+    .search-form {
+      display: grid;
+      grid-template-columns: 1fr 170px 110px auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    @media (max-width: 768px) {
+      .search-form { grid-template-columns: 1fr; }
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--blue);
+    }
+
+    .btn-primary {
+      height: 40px;
+      padding: 0 20px;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .wide-banner {
+      width: 100%;
+      height: 78px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+      background: var(--bg);
+    }
+
+    .player-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .player-avatar {
+      width: 58px;
+      height: 58px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    .player-name {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .player-name span {
+      color: var(--muted);
+      font-weight: 500;
+      font-family: var(--font-mono);
+      font-size: 15px;
+    }
+
+    .player-meta {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tier-icon {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+
+    .acts-section {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .acts-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .act-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .act-season {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .summary-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      padding: 0 10px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .agent-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .agent-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: var(--bg);
+    }
+
+    .result-win { color: var(--green); font-weight: 600; }
+    .result-loss { color: var(--accent); font-weight: 600; }
+    .mono { font-family: var(--font-mono); }
+
+    .sandbox-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn-ghost {
+      padding: 7px 12px;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .btn-ghost:hover, .btn-ghost.active {
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .endpoint-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    pre {
+      background: #07090d;
+      border: 1px solid var(--border);
+      border-radius: 0 0 6px 6px;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #cbd5e1;
+      overflow-x: auto;
+      max-height: 360px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="brand-mark">V/</div>
+        <div>
+          <h1>Valorant-API</h1>
+          <p>Node.js &amp; Express Telemetry Service</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-pill" id="health-pill">
+          <span class="dot" id="health-dot"></span>
+          <span id="health-text">Checking API...</span>
+        </div>
+        <a class="nav-link" href="/api" target="_blank" rel="noreferrer">/api</a>
+        <a class="nav-link" href="/api/health" target="_blank" rel="noreferrer">/api/health</a>
+        <a class="nav-link" href="https://github.com/DeathSurvivor02/Valorant-API" target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+    </header>
+
+    <div class="notice-banner" id="demo-notice"></div>
+
+    <section class="search-panel">
+      <form class="search-form" id="lookup-form">
+        <div class="field">
+          <label for="riot-id">Riot ID (Name#Tag)</label>
+          <input id="riot-id" type="text" value="TenZ#SEN" placeholder="e.g. TenZ#SEN" required />
+        </div>
+        <div class="field">
+          <label for="region">Region</label>
+          <select id="region">
+            <option value="auto" selected>Auto (Detect)</option>
+            <option value="na">NA</option>
+            <option value="eu">EU</option>
+            <option value="ap">AP</option>
+            <option value="kr">KR</option>
+            <option value="latam">LATAM</option>
+            <option value="br">BR</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="match-size">Matches</label>
+          <input id="match-size" type="number" min="1" max="10" value="5" />
+        </div>
+        <button class="btn-primary" id="lookup-btn" type="submit">Lookup Player</button>
+      </form>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Player Profile &amp; Rank</span>
+          <span class="mono" style="font-size: 11px; color: var(--muted);" id="player-mode">—</span>
+        </div>
+        <div id="player-content">
+          <p style="color: var(--muted); font-size: 13px;">Loading player profile...</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Matches &amp; Averages</span>
+          <span class="mono" style="font-size: 11px; color: var(--muted);" id="matches-count">—</span>
+        </div>
+        <div class="summary-strip" id="matches-summary" style="display: none;"></div>
+        <div class="table-wrap" id="matches-content">
+          <p style="color: var(--muted); font-size: 13px;">Loading match history...</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">API Endpoint Inspector</span>
+        <button class="btn-ghost" id="copy-json-btn" type="button">Copy JSON</button>
+      </div>
+      <div class="sandbox-controls">
+        <button class="btn-ghost active" data-endpoint="player" type="button">GET /api/player/:name/:tag</button>
+        <button class="btn-ghost" data-endpoint="matches" type="button">GET /api/matches/:name/:tag</button>
+        <button class="btn-ghost" data-endpoint="health" type="button">GET /api/health</button>
+        <button class="btn-ghost" data-endpoint="info" type="button">GET /api</button>
+      </div>
+      <div class="endpoint-bar">
+        <span id="inspector-url">/api/player/TenZ/SEN?region=auto</span>
+        <span id="inspector-status" style="color: var(--green);">HTTP 200</span>
+      </div>
+      <pre id="inspector-json">{}</pre>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      lastJson: null,
+      activeTab: 'player'
+    };
+
+    function parseRiotId(raw) {
+      const cleaned = (raw || '').trim();
+      const idx = cleaned.lastIndexOf('#');
+      if (idx <= 0 || idx === cleaned.length - 1) {
+        return { name: 'TenZ', tag: 'SEN' };
+      }
+      return {
+        name: cleaned.slice(0, idx).trim(),
+        tag: cleaned.slice(idx + 1).trim()
+      };
+    }
+
+    async function fetchEndpoint(url) {
+      const start = performance.now();
+      const res = await fetch(url);
+      const elapsed = Math.round(performance.now() - start);
+      const data = await res.json();
+      return { ok: res.ok, status: res.status, elapsed, data, url };
+    }
+
+    function setInspector(result) {
+      state.lastJson = result.data;
+      document.getElementById('inspector-url').textContent = result.url;
+      const statusEl = document.getElementById('inspector-status');
+      statusEl.textContent = `HTTP ${result.status} • ${result.elapsed}ms`;
+      statusEl.style.color = result.ok ? 'var(--green)' : 'var(--accent)';
+      document.getElementById('inspector-json').textContent = JSON.stringify(result.data, null, 2);
+    }
+
+    function formatDuration(sec) {
+      if (typeof sec !== 'number' || sec <= 0) return '—';
+      const mins = Math.floor(sec / 60);
+      const rem = sec % 60;
+      return `${mins}m ${String(rem).padStart(2, '0')}s`;
+    }
+
+    function renderPlayer(data) {
+      const container = document.getElementById('player-content');
+      const modeBadge = document.getElementById('player-mode');
+      modeBadge.textContent = `${(data.mode || 'unknown').toUpperCase()}${data.provider ? ` • ${data.provider.toUpperCase()}` : ''}`;
+
+      if (data.error || !data.player) {
+        container.innerHTML = `<p style="color: var(--accent); font-size: 13px;">${data.message || data.error || 'Unable to load player.'}</p>`;
+        return;
+      }
+
+      const p = data.player;
+      const comp = p.competitive || {};
+      const mmrDelta = typeof comp.mmrChangeToLastGame === 'number'
+        ? `${comp.mmrChangeToLastGame >= 0 ? '+' : ''}${comp.mmrChangeToLastGame} RR`
+        : '—';
+
+      const wideBannerHtml = p.card?.wide
+        ? `<img class="wide-banner" src="${p.card.wide}" alt="${p.name} banner" onerror="this.style.display='none'" />`
+        : '';
+
+      const tierIconHtml = comp.tierImage
+        ? `<img class="tier-icon" src="${comp.tierImage}" alt="${comp.currentTier || 'Rank'}" onerror="this.style.display='none'" />`
+        : '';
+
+      const actsHtml = Array.isArray(comp.recentActs) && comp.recentActs.length > 0
+        ? `
+          <div class="acts-section">
+            <div class="stat-label">Recent Acts</div>
+            <div class="acts-list">
+              ${comp.recentActs.map((a) => `
+                <div class="act-item">
+                  <div class="act-season">${a.season}</div>
+                  <div><strong>${a.rank}</strong></div>
+                  <div class="mono" style="color: var(--muted); font-size: 11px;">${a.wins}W / ${a.games}G</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `
+        : '';
+
+      container.innerHTML = `
+        ${wideBannerHtml}
+        <div class="player-top">
+          <img class="player-avatar" src="${p.card?.small || ''}" alt="${p.name}" onerror="this.style.visibility='hidden'" />
+          <div>
+            <div class="player-name">${p.name} <span>#${p.tag}</span></div>
+            <div class="player-meta">Region: ${(p.region || 'na').toUpperCase()} • Level ${p.accountLevel ?? '—'}${p.lastUpdated ? ` • ${p.lastUpdated}` : ''}</div>
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Current Rank</div>
+            <div class="stat-value">${tierIconHtml}<span>${comp.currentTier || 'Unranked'}</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Peak Rank</div>
+            <div class="stat-value">${comp.peakTier || '—'}${comp.peakSeason ? ` <span class="mono" style="font-size:11px;color:var(--muted);">(${comp.peakSeason.toUpperCase()})</span>` : ''}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Tier RR / Last</div>
+            <div class="stat-value">${comp.rankingInTier ?? '—'} RR (${mmrDelta})</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Elo Rating</div>
+            <div class="stat-value">${comp.elo ?? '—'}</div>
+          </div>
+        </div>
+        ${actsHtml}
+      `;
+    }
+
+    function renderMatches(data) {
+      const container = document.getElementById('matches-content');
+      const summaryEl = document.getElementById('matches-summary');
+      const countEl = document.getElementById('matches-count');
+
+      if (data.error || !Array.isArray(data.matches)) {
+        countEl.textContent = '0';
+        summaryEl.style.display = 'none';
+        container.innerHTML = `<p style="color: var(--accent); font-size: 13px;">${data.message || data.error || 'Unable to load matches.'}</p>`;
+        return;
+      }
+
+      countEl.textContent = `${data.matches.length} MATCHES • ${(data.region || '').toUpperCase()}`;
+      if (data.matches.length === 0) {
+        summaryEl.style.display = 'none';
+        container.innerHTML = '<p style="color: var(--muted); font-size: 13px;">No recent matches found for this region.</p>';
+        return;
+      }
+
+      const wins = data.matches.filter((m) => m.result === 'Victory').length;
+      const winRate = Math.round((wins / data.matches.length) * 100);
+      const totalKills = data.matches.reduce((acc, m) => acc + (m.stats?.kills || 0), 0);
+      const totalDeaths = data.matches.reduce((acc, m) => acc + (m.stats?.deaths || 0), 0);
+      const avgKd = totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : totalKills.toFixed(2);
+      const acsList = data.matches.map((m) => m.stats?.acs).filter((v) => typeof v === 'number');
+      const avgAcs = acsList.length ? Math.round(acsList.reduce((a, b) => a + b, 0) / acsList.length) : '—';
+      const hsList = data.matches.map((m) => m.stats?.headshotPct).filter((v) => typeof v === 'number');
+      const avgHs = hsList.length ? `${(hsList.reduce((a, b) => a + b, 0) / hsList.length).toFixed(1)}%` : '—';
+
+      summaryEl.style.display = 'grid';
+      summaryEl.innerHTML = `
+        <div class="stat-box">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value">${winRate}% (${wins}/${data.matches.length})</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Avg K/D</div>
+          <div class="stat-value">${avgKd}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Avg ACS</div>
+          <div class="stat-value">${avgAcs}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Avg HS%</div>
+          <div class="stat-value">${avgHs}</div>
+        </div>
+      `;
+
+      const rows = data.matches.map((m) => {
+        const resultClass = m.result === 'Victory' ? 'result-win' : m.result === 'Defeat' ? 'result-loss' : '';
+        const rounds = m.roundsWon != null && m.roundsLost != null ? `${m.roundsWon}-${m.roundsLost}` : '—';
+        const kda = m.stats ? `${m.stats.kills}/${m.stats.deaths}/${m.stats.assists}` : '—';
+        const hs = m.stats?.headshotPct != null ? `${m.stats.headshotPct}%` : '—';
+        const acs = m.stats?.acs ?? '—';
+        const dmg = m.stats?.damageMade ?? '—';
+        const agentImg = m.agentIcon
+          ? `<img class="agent-icon" src="${m.agentIcon}" alt="${m.agent || ''}" onerror="this.style.display='none'" />`
+          : '';
+
+        return `
+          <tr>
+            <td>
+              <strong>${m.map || '—'}</strong>
+              <div class="mono" style="font-size: 11px; color: var(--muted);">${m.mode || '—'} • ${formatDuration(m.durationSeconds)}</div>
+            </td>
+            <td><div class="agent-cell">${agentImg}<span>${m.agent || '—'}</span></div></td>
+            <td class="${resultClass}">${m.result || '—'} <span class="mono" style="color: var(--muted); font-weight: 400;">(${rounds})</span></td>
+            <td class="mono">${kda} <span style="color: var(--muted); font-size: 11px;">(${m.stats?.kd ?? '—'})</span></td>
+            <td class="mono">${acs}</td>
+            <td class="mono">${hs}</td>
+            <td class="mono">${dmg}</td>
+            <td style="color: var(--muted); font-size: 12px;">${m.server || '—'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Map / Mode</th>
+              <th>Agent</th>
+              <th>Result</th>
+              <th>K / D / A (K/D)</th>
+              <th>ACS</th>
+              <th>HS%</th>
+              <th>DMG</th>
+              <th>Server</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    async function checkHealth() {
+      const dot = document.getElementById('health-dot');
+      const text = document.getElementById('health-text');
+      const notice = document.getElementById('demo-notice');
+
+      try {
+        const res = await fetchEndpoint('/api/health');
+        const mode = res.data.mode || 'demo';
+        dot.className = `dot ${mode === 'live' ? 'ok' : 'demo'}`;
+        text.textContent = `API ${mode.toUpperCase()} • ${res.elapsed}ms`;
+        if (mode === 'demo') {
+          notice.textContent = 'Running in Demo Mode (mock telemetry). Set HENRIK_API_KEY or RIOT_API_KEY in .env for live Riot data.';
+          notice.classList.add('visible');
+        }
+      } catch {
+        dot.className = 'dot err';
+        text.textContent = 'API Offline';
+      }
+    }
+
+    async function runLookup() {
+      const btn = document.getElementById('lookup-btn');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+
+      const { name, tag } = parseRiotId(document.getElementById('riot-id').value);
+      const region = document.getElementById('region').value;
+      const size = document.getElementById('match-size').value || 5;
+
+      const playerUrl = `/api/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${encodeURIComponent(region)}`;
+      const matchesUrl = `/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${encodeURIComponent(region)}&size=${encodeURIComponent(size)}`;
+
+      try {
+        const [playerRes, matchesRes] = await Promise.all([
+          fetchEndpoint(playerUrl),
+          fetchEndpoint(matchesUrl)
+        ]);
+        renderPlayer(playerRes.data);
+        renderMatches(matchesRes.data);
+        setInspector(state.activeTab === 'matches' ? matchesRes : playerRes);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Lookup Player';
+      }
+    }
+
+    document.getElementById('lookup-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      runLookup();
+    });
+
+    document.querySelectorAll('[data-endpoint]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('[data-endpoint]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.activeTab = btn.dataset.endpoint;
+
+        const { name, tag } = parseRiotId(document.getElementById('riot-id').value);
+        const region = document.getElementById('region').value;
+        const size = document.getElementById('match-size').value || 5;
+
+        const urls = {
+          player: `/api/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${encodeURIComponent(region)}`,
+          matches: `/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${encodeURIComponent(region)}&size=${encodeURIComponent(size)}`,
+          health: '/api/health',
+          info: '/api'
+        };
+
+        const res = await fetchEndpoint(urls[state.activeTab]);
+        setInspector(res);
+      });
+    });
+
+    document.getElementById('copy-json-btn').addEventListener('click', async () => {
+      if (!state.lastJson) return;
+      await navigator.clipboard.writeText(JSON.stringify(state.lastJson, null, 2));
+      const btn = document.getElementById('copy-json-btn');
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy JSON'; }, 1200);
+    });
+
+    checkHealth();
+    runLookup();
+  </script>
+</body>
+</html>
